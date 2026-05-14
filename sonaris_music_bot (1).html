@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sonaris Music Bot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
+    body { background: black; overflow-x: hidden; font-family: 'Rajdhani', sans-serif; }
+    .glow { text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 40px #ff0000; }
+    .glow-sm { text-shadow: 0 0 6px #ff0000, 0 0 12px #ff0000; }
+    .btn-glow { box-shadow: 0 0 10px #ff0000; transition: 0.3s; }
+    .btn-glow:hover { box-shadow: 0 0 25px #ff0000, 0 0 50px #ff0000; transform: scale(1.04); }
+    #particles-js { position: fixed; width: 100%; height: 100%; z-index: -1; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10px; margin-left: 6px; font-family: 'Orbitron', monospace; animation: badgePulse 2s infinite alternate; }
+    .badge-red   { background: #dc2626; box-shadow: 0 0 8px #ff0000, 0 0 15px #ff0000; }
+    .badge-yellow{ background: #eab308; box-shadow: 0 0 8px #facc15, 0 0 15px #eab308; }
+    .badge-blue  { background: #2563eb; box-shadow: 0 0 8px #3b82f6, 0 0 15px #2563eb; }
+    @keyframes badgePulse { from { transform: scale(1); opacity: 0.85; } to { transform: scale(1.1); opacity: 1; } }
+    .cursor-glow { position: fixed; width: 200px; height: 200px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,0,0,0.25) 0%, transparent 70%); transform: translate(-50%, -50%); z-index: 0; }
+    .card-hover { transition: transform 0.3s, box-shadow 0.3s; }
+    .card-hover:hover { transform: translateY(-5px); box-shadow: 0 0 20px rgba(255,0,0,0.2); }
+    .eq-bar { display: inline-block; width: 4px; border-radius: 2px; background: #ff0000; margin: 0 1px; animation: eqAnim 0.8s ease-in-out infinite alternate; }
+    .eq-bar:nth-child(2){ animation-delay: 0.1s; }
+    .eq-bar:nth-child(3){ animation-delay: 0.2s; }
+    .eq-bar:nth-child(4){ animation-delay: 0.15s; }
+    .eq-bar:nth-child(5){ animation-delay: 0.05s; }
+    @keyframes eqAnim { from { height: 4px; } to { height: 22px; } }
+    .wave-line { height: 2px; background: linear-gradient(90deg, transparent, #ff0000, transparent); animation: waveScan 3s linear infinite; }
+    @keyframes waveScan { 0%{ opacity:0.3; transform:scaleX(0.5); } 50%{ opacity:1; transform:scaleX(1); } 100%{ opacity:0.3; transform:scaleX(0.5); } }
+    #nowPlayingBar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; background: rgba(10,0,0,0.95); border-top: 1px solid #ff000033; backdrop-filter: blur(12px); }
+    .progress-bar { height: 3px; background: #1f1f1f; border-radius: 2px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg,#ff0000,#ff6666); border-radius: 2px; animation: progAnim 30s linear infinite; }
+    @keyframes progAnim { from{ width:0%; } to{ width:100%; } }
+    h1, h2, h3, .font-display { font-family: 'Orbitron', monospace; }
+    .tab-content.hidden { display: none; }
+    .float-note { position: absolute; font-size: 2rem; animation: floatNote 6s ease-in-out infinite; opacity: 0.08; pointer-events: none; }
+    @keyframes floatNote { 0%{ transform: translateY(0) rotate(0deg); opacity:0.05; } 50%{ transform: translateY(-30px) rotate(10deg); opacity:0.12; } 100%{ transform: translateY(0) rotate(0deg); opacity:0.05; } }
+    .track-row { border-bottom: 1px solid #ffffff08; transition: background 0.2s; }
+    .track-row:hover { background: rgba(255,0,0,0.05); }
+  </style>
+</head>
+<body class="text-white">
+
+<div id="particles-js"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- HEADER -->
+<header class="flex justify-between items-center p-5 border-b border-gray-800 bg-black/60 backdrop-blur sticky top-0 z-50">
+  <div class="flex items-center gap-3">
+    <div style="display:flex;align-items:flex-end;gap:2px;height:22px;">
+      <span class="eq-bar" style="height:8px;"></span>
+      <span class="eq-bar" style="height:14px;"></span>
+      <span class="eq-bar" style="height:10px;"></span>
+      <span class="eq-bar" style="height:18px;"></span>
+      <span class="eq-bar" style="height:6px;"></span>
+    </div>
+    <h1 class="text-2xl font-bold text-red-500 glow">Sonaris</h1>
+  </div>
+  <nav class="space-x-6 hidden md:flex items-center">
+    <a href="#features" class="hover:text-red-400 transition-colors">Features</a>
+    <a href="#commands" class="hover:text-red-400 transition-colors">Commands</a>
+    <a href="#queue" class="hover:text-red-400 transition-colors">Queue</a>
+    <a href="#tos" class="hover:text-red-400 transition-colors">ToS</a>
+    <a href="https://discord.com/oauth2/authorize?client_id=1504542344517517332&permissions=3221504&integration_type=0&scope=applications.commands+bot"
+       target="_blank" class="bg-red-600 px-4 py-2 rounded-xl btn-glow text-sm font-semibold">➕ Add to Discord</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="text-center py-28 relative overflow-hidden">
+  <span class="float-note" style="top:10%;left:8%;animation-delay:0s;">♪</span>
+  <span class="float-note" style="top:30%;right:10%;animation-delay:1.5s;">♫</span>
+  <span class="float-note" style="bottom:20%;left:15%;animation-delay:3s;">🎵</span>
+  <span class="float-note" style="bottom:10%;right:20%;animation-delay:2s;">♬</span>
+  <div class="wave-line mb-8 mx-auto" style="width:300px;"></div>
+  <p class="text-red-500 text-sm tracking-widest mb-3 uppercase">The Ultimate Discord Music Experience</p>
+  <h2 class="text-6xl font-bold mb-6 glow">Sonaris Music Bot</h2>
+  <p class="text-gray-400 text-lg mb-4">🎵 Crystal-Clear Audio • Smart Queue • Filters &amp; Effects • Playlist Support</p>
+  <p class="text-gray-600 text-sm mb-10">YouTube • Spotify • SoundCloud • Apple Music • Deezer</p>
+  <div class="flex flex-col sm:flex-row gap-4 justify-center">
+    <a href="https://discord.com/oauth2/authorize?client_id=1504542344517517332&permissions=3221504&integration_type=0&scope=applications.commands+bot"
+       target="_blank" class="bg-red-600 px-8 py-3 rounded-2xl text-lg btn-glow font-semibold inline-block">🎶 Add Sonaris to Your Server</a>
+    <a href="#commands" class="border border-red-600/50 px-8 py-3 rounded-2xl text-lg hover:border-red-500 transition-colors inline-block">View Commands</a>
+  </div>
+  <div class="wave-line mt-10 mx-auto" style="width:300px;"></div>
+</section>
+
+<!-- STATS BAR -->
+<section class="border-y border-gray-800 bg-gray-900/40 py-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center px-10">
+    <div><p class="text-3xl font-bold text-red-400 glow-sm">50K+</p><p class="text-gray-500 text-sm">Servers</p></div>
+    <div><p class="text-3xl font-bold text-red-400 glow-sm">5</p><p class="text-gray-500 text-sm">Music Sources</p></div>
+    <div><p class="text-3xl font-bold text-red-400 glow-sm">20+</p><p class="text-gray-500 text-sm">Audio Filters</p></div>
+    <div><p class="text-3xl font-bold text-red-400 glow-sm">99.9%</p><p class="text-gray-500 text-sm">Uptime</p></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="grid md:grid-cols-3 gap-8 p-10">
+  <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/20 card-hover">
+    <div class="text-3xl mb-3">🎵</div>
+    <h3 class="text-xl text-red-400 mb-2">Multi-Source</h3>
+    <p class="text-gray-400">Stream from YouTube, Spotify, SoundCloud, Apple Music, and Deezer — all in one bot.</p>
+  </div>
+  <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/20 card-hover">
+    <div class="text-3xl mb-3">🎚️</div>
+    <h3 class="text-xl text-red-400 mb-2">Audio Filters</h3>
+    <p class="text-gray-400">Bassboost, Nightcore, Vaporwave, 8D, Karaoke, and 20+ more real-time audio effects.</p>
+  </div>
+  <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/20 card-hover">
+    <div class="text-3xl mb-3">📋</div>
+    <h3 class="text-xl text-red-400 mb-2">Smart Queue</h3>
+    <p class="text-gray-400">Unlimited queue, shuffle, loop modes, and autoplay similar songs when the queue ends.</p>
+  </div>
+  <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/20 card-hover">
+    <div class="text-3xl mb-3">💎</div>
+    <h3 class="text-xl text-red-400 mb-2">HD Audio</h3>
+    <p class="text-gray-400">Crystal-clear lossless-quality audio streaming with low latency and zero interruptions.</p>
+  </div>
+  <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/20 card-hover">
+    <div class="text-3xl mb-3">🎤</div>
+    <h3 class="text-xl text-red-400 mb-2">Lyrics</h3>
+    <p class="text-gray-400">Real-time synced lyrics for any track. Sing along without leaving Discord.</p>
+  </div>
+  <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/20 card-hover">
+    <div class="text-3xl mb-3">⚡</div>
+    <h3 class="text-xl text-red-400 mb-2">Instant Play</h3>
+    <p class="text-gray-400">Zero buffering, instant song start. Powered by optimized Lavalink infrastructure.</p>
+  </div>
+</section>
+
+<!-- NOW PLAYING SHOWCASE -->
+<section class="text-center p-10">
+  <h2 class="text-3xl font-bold glow mb-2">Beautiful Now Playing Cards</h2>
+  <p class="text-gray-500 mb-8">Rich embed cards with artwork, progress bar, and controls</p>
+  <div class="max-w-lg mx-auto bg-gray-900 rounded-2xl overflow-hidden border border-red-600/30 shadow-lg">
+    <div class="h-2 bg-gradient-to-r from-red-700 via-red-500 to-red-700"></div>
+    <div class="p-6 flex items-center gap-5">
+      <div class="w-16 h-16 rounded-xl flex items-center justify-center text-3xl flex-shrink-0"
+           style="background: linear-gradient(135deg,#7f0000,#ff0000);">🎵</div>
+      <div class="text-left flex-1">
+        <p class="text-white font-bold text-lg leading-tight">Blinding Lights</p>
+        <p class="text-gray-400 text-sm">The Weeknd • After Hours</p>
+        <div class="mt-3 progress-bar"><div class="progress-fill" style="width:42%;"></div></div>
+        <div class="flex justify-between text-xs text-gray-600 mt-1"><span>1:47</span><span>4:22</span></div>
+      </div>
+    </div>
+    <div class="flex justify-center gap-6 pb-5 text-2xl">
+      <button class="hover:text-red-400 transition-colors">⏮</button>
+      <button class="hover:text-red-400 transition-colors text-red-500">⏸</button>
+      <button class="hover:text-red-400 transition-colors">⏭</button>
+      <button class="hover:text-red-400 transition-colors">🔀</button>
+      <button class="hover:text-red-400 transition-colors">🔁</button>
+    </div>
+  </div>
+</section>
+
+<!-- QUEUE SECTION -->
+<section id="queue" class="p-10">
+  <h2 class="text-3xl font-bold glow mb-2 text-center">Smart Queue Manager</h2>
+  <p class="text-gray-500 text-center mb-8">Full queue control with loop modes, shuffle, and autoplay</p>
+  <div class="max-w-2xl mx-auto bg-gray-900 rounded-2xl border border-red-600/20 overflow-hidden">
+    <div class="flex items-center justify-between p-4 border-b border-gray-800">
+      <span class="text-red-400 font-semibold">Up Next — 5 Tracks</span>
+      <div class="flex gap-2 text-sm">
+        <button class="px-3 py-1 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/40 transition-colors">🔀 Shuffle</button>
+        <button class="px-3 py-1 rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors">🔁 Loop</button>
+      </div>
+    </div>
+    <div class="track-row flex items-center gap-4 px-4 py-3">
+      <span class="text-red-500 font-bold w-5 text-center">1</span><span class="text-xl">🎵</span>
+      <div class="flex-1"><p class="text-white text-sm font-semibold">Starboy</p><p class="text-gray-500 text-xs">The Weeknd ft. Daft Punk • 3:50</p></div>
+      <span class="text-gray-600 text-xs">@UserX</span>
+    </div>
+    <div class="track-row flex items-center gap-4 px-4 py-3">
+      <span class="text-gray-600 w-5 text-center">2</span><span class="text-xl">🎵</span>
+      <div class="flex-1"><p class="text-white text-sm font-semibold">Save Your Tears</p><p class="text-gray-500 text-xs">The Weeknd • 3:35</p></div>
+      <span class="text-gray-600 text-xs">@UserY</span>
+    </div>
+    <div class="track-row flex items-center gap-4 px-4 py-3">
+      <span class="text-gray-600 w-5 text-center">3</span><span class="text-xl">🎵</span>
+      <div class="flex-1"><p class="text-white text-sm font-semibold">Levitating</p><p class="text-gray-500 text-xs">Dua Lipa • 3:23</p></div>
+      <span class="text-gray-600 text-xs">@UserZ</span>
+    </div>
+    <div class="track-row flex items-center gap-4 px-4 py-3">
+      <span class="text-gray-600 w-5 text-center">4</span><span class="text-xl">🎵</span>
+      <div class="flex-1"><p class="text-white text-sm font-semibold">Stay</p><p class="text-gray-500 text-xs">The Kid LAROI &amp; Justin Bieber • 2:21</p></div>
+      <span class="text-gray-600 text-xs">@UserA</span>
+    </div>
+    <div class="track-row flex items-center gap-4 px-4 py-3">
+      <span class="text-gray-600 w-5 text-center">5</span><span class="text-xl">🎵</span>
+      <div class="flex-1"><p class="text-white text-sm font-semibold">Peaches</p><p class="text-gray-500 text-xs">Justin Bieber ft. Daniel Caesar • 3:18</p></div>
+      <span class="text-gray-600 text-xs">@UserB</span>
+    </div>
+  </div>
+</section>
+
+<!-- AUDIO FILTERS -->
+<section class="text-center p-10 bg-gray-950/50">
+  <h2 class="text-3xl font-bold glow mb-2">20+ Audio Filters</h2>
+  <p class="text-gray-500 mb-8">Apply real-time audio effects to your music</p>
+  <div class="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🔊 Bassboost</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🌙 Nightcore</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🌊 Vaporwave</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🎙️ Karaoke</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🎵 8D Audio</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🐌 Slowmo</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">⚡ Speed Up</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🎸 Rock</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🎹 Piano</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🎤 Vocal Boost</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">🏟️ Stadium</span>
+    <span class="bg-gray-900 border border-red-600/30 px-4 py-2 rounded-full text-sm text-red-300 hover:bg-red-600/20 transition-colors cursor-pointer">💫 Tremolo</span>
+    <span class="bg-gray-900 border border-gray-600/30 px-4 py-2 rounded-full text-sm text-gray-500">+ 8 more...</span>
+  </div>
+</section>
+
+<!-- COMMANDS -->
+<section id="commands" class="p-10">
+  <h2 class="text-3xl font-bold mb-6 text-center glow">Command System</h2>
+  <div class="flex justify-center gap-4 mb-8 flex-wrap">
+    <button onclick="showTab('playback')" class="tab-btn bg-red-600 px-4 py-2 rounded-xl btn-glow text-sm font-semibold">Playback</button>
+    <button onclick="showTab('queue_cmds')" class="tab-btn bg-gray-800 px-4 py-2 rounded-xl text-sm font-semibold">Queue</button>
+    <button onclick="showTab('filters_cmds')" class="tab-btn bg-gray-800 px-4 py-2 rounded-xl text-sm font-semibold">Filters</button>
+  </div>
+
+  <!-- Playback -->
+  <div id="playback" class="tab-content grid md:grid-cols-3 gap-6">
+    <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/30 card-hover">
+      <h3 class="text-red-400">🎵 /play <span class="text-xs bg-red-600 px-2 py-1 rounded ml-2">PLAYBACK</span></h3>
+      <p class="text-gray-400 mt-2">Play a song by name or URL from YouTube, Spotify, SoundCloud &amp; more.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/30 card-hover">
+      <h3 class="text-red-400">⏸ /pause <span class="text-xs bg-red-600 px-2 py-1 rounded ml-2">PLAYBACK</span></h3>
+      <p class="text-gray-400 mt-2">Pause the currently playing track instantly.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/30 card-hover">
+      <h3 class="text-red-400">▶️ /resume <span class="text-xs bg-red-600 px-2 py-1 rounded ml-2">PLAYBACK</span></h3>
+      <p class="text-gray-400 mt-2">Resume a paused song from where it left off.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/30 card-hover">
+      <h3 class="text-red-400">⏭ /skip <span class="text-xs bg-red-600 px-2 py-1 rounded ml-2">PLAYBACK</span></h3>
+      <p class="text-gray-400 mt-2">Skip to the next track in the queue.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/30 card-hover">
+      <h3 class="text-red-400">⏹ /stop <span class="text-xs bg-red-600 px-2 py-1 rounded ml-2">PLAYBACK</span></h3>
+      <p class="text-gray-400 mt-2">Stop playback and clear the entire queue.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/30 card-hover">
+      <h3 class="text-red-400">🔊 /volume <span class="text-xs bg-red-600 px-2 py-1 rounded ml-2">PLAYBACK</span></h3>
+      <p class="text-gray-400 mt-2">Set the playback volume from 0 to 200%.</p>
+    </div>
+  </div>
+
+  <!-- Queue -->
+  <div id="queue_cmds" class="tab-content hidden grid md:grid-cols-3 gap-6">
+    <div class="bg-gray-900 p-6 rounded-2xl border border-yellow-500/30 card-hover">
+      <h3 class="text-yellow-400">📋 /queue <span class="text-xs bg-yellow-500 px-2 py-1 rounded ml-2">QUEUE</span></h3>
+      <p class="text-gray-400 mt-2">View the full queue with track info and durations.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-yellow-500/30 card-hover">
+      <h3 class="text-yellow-400">🔀 /shuffle <span class="text-xs bg-yellow-500 px-2 py-1 rounded ml-2">QUEUE</span></h3>
+      <p class="text-gray-400 mt-2">Shuffle all tracks in the queue randomly.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-yellow-500/30 card-hover">
+      <h3 class="text-yellow-400">🔁 /loop <span class="text-xs bg-yellow-500 px-2 py-1 rounded ml-2">QUEUE</span></h3>
+      <p class="text-gray-400 mt-2">Toggle loop for the current track or entire queue.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-yellow-500/30 card-hover">
+      <h3 class="text-yellow-400">🗑️ /remove <span class="text-xs bg-yellow-500 px-2 py-1 rounded ml-2">QUEUE</span></h3>
+      <p class="text-gray-400 mt-2">Remove a specific track from the queue by position.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-yellow-500/30 card-hover">
+      <h3 class="text-yellow-400">⏩ /seek <span class="text-xs bg-yellow-500 px-2 py-1 rounded ml-2">QUEUE</span></h3>
+      <p class="text-gray-400 mt-2">Jump to any timestamp in the current track.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-yellow-500/30 card-hover">
+      <h3 class="text-yellow-400">🔃 /move <span class="text-xs bg-yellow-500 px-2 py-1 rounded ml-2">QUEUE</span></h3>
+      <p class="text-gray-400 mt-2">Move a track from one position to another in the queue.</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div id="filters_cmds" class="tab-content hidden grid md:grid-cols-3 gap-6">
+    <div class="bg-gray-900 p-6 rounded-2xl border border-blue-500/30 card-hover">
+      <h3 class="text-blue-400">🔊 /bassboost <span class="text-xs bg-blue-500 px-2 py-1 rounded ml-2">FILTER</span></h3>
+      <p class="text-gray-400 mt-2">Apply a deep bass enhancement to the audio.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-blue-500/30 card-hover">
+      <h3 class="text-blue-400">🌙 /nightcore <span class="text-xs bg-blue-500 px-2 py-1 rounded ml-2">FILTER</span></h3>
+      <p class="text-gray-400 mt-2">Speed up the track for a classic nightcore effect.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-blue-500/30 card-hover">
+      <h3 class="text-blue-400">🎵 /8d <span class="text-xs bg-blue-500 px-2 py-1 rounded ml-2">FILTER</span></h3>
+      <p class="text-gray-400 mt-2">Surround-sound 8D audio effect for headphone users.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-blue-500/30 card-hover">
+      <h3 class="text-blue-400">🌊 /vaporwave <span class="text-xs bg-blue-500 px-2 py-1 rounded ml-2">FILTER</span></h3>
+      <p class="text-gray-400 mt-2">Slow, dreamy lo-fi vaporwave audio filter.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-blue-500/30 card-hover">
+      <h3 class="text-blue-400">🎙️ /karaoke <span class="text-xs bg-blue-500 px-2 py-1 rounded ml-2">FILTER</span></h3>
+      <p class="text-gray-400 mt-2">Remove vocals from the track for karaoke mode.</p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-blue-500/30 card-hover">
+      <h3 class="text-blue-400">🔄 /clearfilter <span class="text-xs bg-blue-500 px-2 py-1 rounded ml-2">FILTER</span></h3>
+      <p class="text-gray-400 mt-2">Remove all active audio filters and restore defaults.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORY LEGEND -->
+<section class="p-10 text-center bg-gray-950/50">
+  <h2 class="text-2xl font-bold mb-6 glow">Command Categories</h2>
+  <div class="flex flex-col md:flex-row justify-center gap-6">
+    <div class="bg-gray-900 p-6 rounded-2xl border border-red-600/30 card-hover">
+      <h3 class="text-red-400 text-lg">🎵 Playback Commands</h3>
+      <p class="text-gray-400">Theme: Red • Badge: <span class="badge badge-red">PLAYBACK</span></p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-yellow-500/30 card-hover">
+      <h3 class="text-yellow-400 text-lg">📋 Queue Commands</h3>
+      <p class="text-gray-400">Theme: Yellow • Badge: <span class="badge badge-yellow">QUEUE</span></p>
+    </div>
+    <div class="bg-gray-900 p-6 rounded-2xl border border-blue-500/30 card-hover">
+      <h3 class="text-blue-400 text-lg">🎚️ Filter Commands</h3>
+      <p class="text-gray-400">Theme: Blue • Badge: <span class="badge badge-blue">FILTER</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- SOURCES -->
+<section class="p-10 text-center">
+  <h2 class="text-3xl font-bold glow mb-2">Supported Sources</h2>
+  <p class="text-gray-500 mb-8">Play from your favorite music platforms</p>
+  <div class="flex flex-wrap justify-center gap-6">
+    <div class="bg-gray-900 border border-red-600/20 px-6 py-4 rounded-2xl flex items-center gap-3 card-hover"><span class="text-2xl">▶️</span><span class="text-white font-semibold">YouTube</span></div>
+    <div class="bg-gray-900 border border-green-500/20 px-6 py-4 rounded-2xl flex items-center gap-3 card-hover"><span class="text-2xl">🎧</span><span class="text-white font-semibold">Spotify</span></div>
+    <div class="bg-gray-900 border border-orange-500/20 px-6 py-4 rounded-2xl flex items-center gap-3 card-hover"><span class="text-2xl">☁️</span><span class="text-white font-semibold">SoundCloud</span></div>
+    <div class="bg-gray-900 border border-pink-500/20 px-6 py-4 rounded-2xl flex items-center gap-3 card-hover"><span class="text-2xl">🍎</span><span class="text-white font-semibold">Apple Music</span></div>
+    <div class="bg-gray-900 border border-blue-500/20 px-6 py-4 rounded-2xl flex items-center gap-3 card-hover"><span class="text-2xl">🎶</span><span class="text-white font-semibold">Deezer</span></div>
+  </div>
+</section>
+
+<!-- TOS -->
+<section id="tos" class="p-10">
+  <h2 class="text-2xl font-bold mb-3">Terms of Service</h2>
+  <p class="text-gray-400">Use Sonaris responsibly. Do not use the bot to stream copyrighted material in violation of platform terms. The bot is provided as-is. We reserve the right to restrict access to servers that abuse the service.</p>
+</section>
+
+<!-- CTA -->
+<section class="text-center py-20 relative overflow-hidden">
+  <div class="wave-line mb-8 mx-auto" style="width:400px;"></div>
+  <h2 class="text-4xl font-bold glow mb-4">Ready to Vibe?</h2>
+  <p class="text-gray-400 mb-8 max-w-md mx-auto">Add Sonaris to your Discord server and bring the best music experience to your community.</p>
+  <a href="https://discord.com/oauth2/authorize?client_id=1504542344517517332&permissions=3221504&integration_type=0&scope=applications.commands+bot"
+     target="_blank" class="bg-red-600 px-10 py-4 rounded-2xl text-xl btn-glow font-bold inline-block">🎶 Add Sonaris Now — It's Free</a>
+  <div class="wave-line mt-8 mx-auto" style="width:400px;"></div>
+</section>
+
+<footer class="text-center p-5 border-t border-gray-800 text-gray-500 mb-16">
+  <p>© 2026 Sonaris Music Bot</p>
+  <p class="text-xs mt-1 text-gray-700">Not affiliated with YouTube, Spotify, or Discord Inc.</p>
+</footer>
+
+<!-- FIXED NOW PLAYING BAR -->
+<div id="nowPlayingBar" class="p-3">
+  <div class="max-w-4xl mx-auto flex items-center gap-4">
+    <span class="text-xl">🎵</span>
+    <div class="flex-1">
+      <div class="flex justify-between text-xs text-gray-500 mb-1">
+        <span class="text-white text-sm font-semibold">Blinding Lights – The Weeknd</span>
+        <span>Demo Preview</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:2px;height:16px;">
+      <span class="eq-bar" style="height:6px;width:3px;"></span>
+      <span class="eq-bar" style="height:10px;width:3px;"></span>
+      <span class="eq-bar" style="height:8px;width:3px;"></span>
+      <span class="eq-bar" style="height:14px;width:3px;"></span>
+      <span class="eq-bar" style="height:5px;width:3px;"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.getElementById(tab).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('bg-red-600','btn-glow');
+    btn.classList.add('bg-gray-800');
+  });
+  event.target.classList.add('bg-red-600','btn-glow');
+  event.target.classList.remove('bg-gray-800');
+}
+</script>
+
+<script>
+particlesJS("particles-js", {
+  particles: {
+    number: { value: 80 },
+    color: { value: "#ff0000" },
+    opacity: { value: 0.15 },
+    size: { value: 2 },
+    move: { speed: 0.8 },
+    line_linked: { enable: true, distance: 120, color: "#ff0000", opacity: 0.05 }
+  }
+});
+const glow = document.getElementById('cursorGlow');
+document.addEventListener('mousemove', (e) => {
+  glow.style.left = e.clientX + 'px';
+  glow.style.top = e.clientY + 'px';
+});
+</script>
+
+</body>
+</html>
